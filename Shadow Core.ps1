@@ -2,7 +2,7 @@ Clear-Host
 function Show-Menu
 {
     param (
-        [string]$Title = 'CQI Shadow Utility'
+        [string]$Title = 'Shadow Utility'
           )
           Write-Host "==================== $Title ===================="
           Write-Host "=                                                          ="
@@ -21,7 +21,7 @@ function Show-Menu
 }
 do
 {
-    Show-Menu -Title 'CQI Shadow Utility'
+    Show-Menu -Title 'Shadow Utility'
 
     $selection = Read-Host "Please select an option from the list"
     switch ($selection)
@@ -30,7 +30,7 @@ do
             {
             'Generating Session List....'
 
-            Get-RDUserSession -ConnectionBroker "xRDWeb.wedgepc.com" | Sort-Object Username | ogv | ft Username, UnifiedSessionId, HostServer, SessionState
+            Get-RDUserSession -ConnectionBroker "rds.contoso.com" | Sort-Object Username | ogv | ft Username, UnifiedSessionId, HostServer, SessionState
             Write-Host
             Write-Host
             Clear-Host
@@ -58,8 +58,8 @@ do
             {
             Clear-Host
             
-            "            This utility is meant to be used by the CQI Team for the purposes of shadowing the sessions of 
-            users on the Wedge Medical RDS Servers. These sessions are initiated with full control permissions, 
+            "            This utility is meant to be used for the purposes of shadowing the sessions of 
+            users on RDS Servers. These sessions are initiated with full control permissions, 
             and executed only with the approved consent of the user being shadowed.
             
             To use this utility, first select the `List Sessions` option to generate a list of all users currently 
@@ -74,13 +74,11 @@ do
             that the user is connected to. The next will ask for the user's Session ID. This will be where you enter 
             the Unified Session ID you copied.
             
-            For example, of JDoe is connected with the UnifiedSessionId of 26, and is connected on XRD2, you will enter 
-            XRD2 for the server, then 26 for the ID
+            For example, of JDoe is connected with the UnifiedSessionId of 26, and is connected on SRV2, you will enter 
+            SRV2 for the server, then 26 for the ID
             
             Once you enter the ID, it will execute the process to connect, waiting first for the user to give consent.
-            If the connection fails, the user either rejected the consent, or their session ended.
-            
-            If you have any questions or need help with this utility, please contact support@Computrex.com"
+            If the connection fails, the user either rejected the consent, or their session ended."
             Write-Host
             Write-Host
             Pause
