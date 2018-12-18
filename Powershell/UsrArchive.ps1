@@ -6,101 +6,86 @@ Clear-Host
 function Invoke-Archive
 {
     ##Get user data based on input and parse the First and Last name for formatting, parse SID to its own variable
-    $UsrData = Get-ADUser -Identity $UsrSearch
+    Try {$UsrData = Get-ADUser -Identity $UsrSearch -ErrorAction Stop}
+    
+    Catch 
+    {
+    Write-Host "Error: User Not Found"
+    Write-Host "- - - - -"
+    Continue
+    }
+
     $NameF=$UsrData.surname+$UsrData.GivenName
     $SID=$UsrData.sid
-    
+    $UsrFolder=(($UsrData.surname).trim()+", "+($UsrData.GivenName).trim())
+
+
     ##Check for directory, and if it doesnt exist, create directory for the user, print success##
-    $UsrFolder=($UsrData.surname+", "+$UsrData.GivenName).trim()
-    If (!(Test-Path "\\##PATH##\UPDArchives\$UsrFolder"))
+    If (!(Test-Path "\\192.168.30.24\UPDArchives\$UsrFolder"))
     {
-    New-Item -ItemType directory -Path "\\##PATH##\$UsrFolder"
+    New-Item -ItemType directory -Path "\\192.168.30.24\UPDArchives\$UsrFolder"
     Write-Host
     Write-Host "- - - - - - - - -"
     Write-Host "Directory Created Successfully"
     }
+
     Else
     {
     Write-Host "- - - - - - - - -"
-    Write-Host "Directory Exists"
+    Write-Host "Directory Exists - \\192.168.30.24\UPDArchives\$UsrFolder"
     }
 
     ##Determine location of VHDX##
-    $Path1 = "\\##PATH##\UVHD-$SID.vhdx"
-    $Path2 = "\\##PATH##\UVHD-$SID.vhdx"
+    $Path1 = "\\192.168.30.24\UPD\UVHD-$SID.vhdx"
+    $Path2 = "\\192.168.30.24\UPD2\UVHD-$SID.vhdx"
 
         If (Test-Path "$Path1" -PathType leaf)
-        {
-        $UPDPath = "\\##PATH##\"
-        }
-
-        ElseIf (Test-Path "$Path2" -PathType leaf)
-        {
-        $UPDPath = "\\##PATH##"
-        }
-
-        Else
-        {
-        Write-Host 'Error: Destination not found - No VHDX Available'
-        Continue
-        }
+        {$UPDPath = "\\192.168.30.24\UPD\"}
+        ElseIf (Test-Path "$Path2" -PathType leaf) {$UPDPath = "\\192.168.30.24\UPD2\"}
+        Else {Write-Host 'Error: No VHDX Available'
+        Continue}
         
-        $Filename = "UVHD-$SID.vhdx"
+        $UsrFile=($Term+$NameF).trim()
 
-    
-    ###ARCHIVE VHDX###
-    [string]$7ZipPath = (Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\7-Zip" -ErrorAction SilentlyContinue) | Select-Object -ExpandProperty "Path" -ErrorAction SilentlyContinue
-    if (!([string]::IsNullOrEmpty($7ZipPath)))
-    {
-        Write-Verbose ("7-Zip installation folder: {0}" -f $7ZipPath)
-        $7ZipPath = Join-Path $7ZipPath "7z.exe"
-        if (Test-Path $7ZipPath)
+        if (Test-Path "\\192.168.30.24\UPDArchives\$UsrFolder") 
         {
-            ##Destination
-            $BackupFolder = "$UPDPath$Filename"
-            Write-Verbose ("7-Zip executable found at `"{0}.`"" -f $7ZipPath)
-            [string]$archivePath = "\\##PATH##\$UsrFolder\$Term$NameF.7z"
-            Write-Verbose ("Archive Path: `"{0}`"" -f $archivePath)
-            & "$7ZipPath" a -mx3 -r "$archivePath" "$BackupFolder" | Out-Null
-        }
-        else
-        {
-            Write-Verbose ("7-Zip executable not found at `"{0}.`"" -f $7ZipPath)
-        }
-    }
-    
-    ##ARCHIVE PST###
-    If (Test-Path "\\##PATH##\$UsrFolder\$Term$NameF.7z")
-        {
-        Write-Host "Archive Created Successfully in the following directory: \\xfiles\UPDArchives\$UsrFolder"
+        set-alias sz "$env:ProgramFiles\7-Zip\7z.exe"  
+        $Source = "$UPDPath"+"UVHD-"+"$SID"+".vhdx" 
+        $Target = "\\192.168.30.24\UPDArchives\$UsrFolder\$UsrFile.7z"
+
+        sz a -mx3 -bsp1 $Target $Source | Out-Null
+        Write-Host "VHDX Archived: \\xfiles\UPDArchives\$UsrFolder"
         $ARCStatus = "Success"
         ####Remove-Item -Path "$UPDPath$Filename"
-        }
+        }    
 
-    ElseIf (!(Test-Path "\\##PATH##\$UsrFolder\$Term$NameF.7z"))
+        if (!(Test-Path "\\192.168.30.24\UPDArchives\$UsrFolder\$UsrFile.7z"))
         {
-        Write-Host "Archive creation unsuccessful"
+        Write-Host "No VHDX Archived"
         $ARCStatus = "Failed"
         }
 
+   
     ##Update Archive with PST if it exists.
-    If (Test-Path "\\##PATH##\$UsrFolder\$NameF.pst")
+    If (Test-Path "\\192.168.30.24\UPDArchives\$UsrFolder\$UsrSearch.pst")
         {   
-        ##Destination
-        $BackupFolder = "\\##PATH##\$UsrFolder\$NameF.pst"
-        Write-Verbose ("7-Zip executable found at `"{0}.`"" -f $7ZipPath)
-        [string]$archivePath = "\\##PATH##\$UsrFolder\$Term$NameF.7z"
-        Write-Verbose ("Archive Path: `"{0}`"" -f $archivePath)
-        & "$7ZipPath" a -mx3 -r "$archivePath" "$BackupFolder" | Out-Null
-        Write-Host 'Archive updated with PST.'
-        ####Remove-Item -Path "\\##PATH##\$UsrFolder\$NameF.pst"
+        set-alias sz "$env:ProgramFiles\7-Zip\7z.exe"  
+        $BackupPST = "\\192.168.30.24\UPDArchives\$UsrFolder\$UsrSearch.pst"
+        $Source = "$BackupPST" 
+        $Target = "\\192.168.30.24\UPDArchives\$UsrFolder\$UsrFile.7z"
+
+        sz a -mx3 -bsp1 $Target $Source | Out-Null
+
+
+        Write-Host "PST Archived: \\xfiles\UPDArchives\$UsrFolder"
+        ####Remove-Item -Path "\\192.168.30.24\UPDArchives\$UsrFolder\$NameF.pst"
         $PSTStatus = "PST Added"
         }
     
     ##Otherwise, inform no PST available.
-    ElseIf (!(Test-Path "\\##PATH##\$UsrFolder\$NameF.pst"))
+    ElseIf (!(Test-Path "\\192.168.30.24\UPDArchives\$UsrFolder\$UsrSearch.pst"))
         {
-        Write-Host 'No PST to add to Archive.'
+        Write-Host 'No PST Archived.'
         $PSTStatus = "No PST"
         }
 
@@ -112,7 +97,7 @@ function Invoke-Archive
     Archive = "$ARCStatus"
     PST = "$PSTStatus"
     }
-    $archiveResults | Select-Object -Property Username,Name,TerminationDate,Archive,Pst | Export-CSV -Path "\\##PATH##\Results-$TDate.csv" -Append -NoTypeInformation
+    $archiveResults | Select-Object -Property Username,Name,TerminationDate,Archive,Pst | Export-CSV -Path "\\192.168.30.24\UPDArchives\Results-$TDate.csv" -Append -NoTypeInformation
 }
 
 ##Menu
@@ -165,7 +150,7 @@ do
         '2'
             {
             ##Import formatted CSV
-            $Users = Import-csv -Delimiter "," -Path "\\##PATH##\Userlist.CSV"
+            $Users = Import-csv -Delimiter "," -Path "\\192.168.30.24\UPDArchives\Userlist.CSV"
 
             ##Recursively run the command for each user in the document
             foreach ($User in $Users)
@@ -178,6 +163,7 @@ do
 
                 ##Output this termination date and the username
                 Write-Host
+                Write-Host "- - - - -"
                 Write-Host $UsrSearch
 
                 ##Invoke the Archiving function
