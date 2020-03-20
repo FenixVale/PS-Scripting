@@ -1,0 +1,1 @@
+SELECT Hostname, OperatingSystem, InstallDate, OSUpdates, LastLoggedOnUser FROM dbo.Clients WHERE OSUpdates <= DATEADD(DAY, -60, GETDATE())
